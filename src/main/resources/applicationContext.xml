@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+         http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+        http://www.springframework.org/schema/tx 
+        http://www.springframework.org/schema/tx/spring-tx-3.1.xsd 
+        " >
+    <!-- 数据源 -->
+    <!-- 使用c3p0 数据库链接池 -->
+		<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"   destroy-method="close" >    
+		    <!-- c3p0连接池 -->
+		   <property name="driverClass"><value>oracle.jdbc.driver.OracleDriver</value></property>
+		   <property name="jdbcUrl"><value>jdbc:oracle:thin:@localhost:1521:orcl</value></property>
+		   <property name="user"><value>scott</value></property>
+		  	<property name="password"><value>admin</value></property>
+		  	<!--连接池中保留的最小连接数。-->            
+		    <property name="minPoolSize" value="10" />        
+		    <!--连接池中保留的最大连接数。Default: 15 -->         
+		    <property name="maxPoolSize" value="100" />        
+		    <!--最大空闲时间,1800秒内未使用则连接被丢弃。若为0则永不丢弃。Default: 0 -->               
+		    <property name="maxIdleTime" value="1800" />        
+		    <!--当连接池中的连接耗尽的时候c3p0一次同时获取的连接数。Default: 3 -->               
+		    <property name="acquireIncrement" value="3" />         
+		    <property name="maxStatements" value="1000" />          
+		    <property name="initialPoolSize" value="10" />          
+		    <!--每60秒检查所有连接池中的空闲连接。Default: 0 -->       
+		    <property name="idleConnectionTestPeriod" value="60" />          
+		    <!--定义在从数据库获取新连接失败后重复尝试的次数。Default: 30 -->       
+		    <property name="acquireRetryAttempts" value="30" />          	          
+  </bean>
+  <!--   创建sessionFactory -->
+   <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+   <property name="configLocations">
+   <value>classpath:hibernate.cfg.xml</value>
+   </property>
+   <property name="dataSource" ref="dataSource"></property>
+   </bean>    
+   
+  <!--  将sessionFactory注入dao  -->
+  <bean id="customerDao" class="com.lingzhuo.daoImpl.CustomerDaoImpl">
+  <property name="sessionFactory" ref="sessionFactory"></property>
+  </bean>
+  
+ <!--  事务管理器 -->
+  <bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+  <property name="sessionFactory" ref="sessionFactory"></property>
+  </bean>
+   
+ <!--   事务传播特性 -->
+<tx:advice id="advice"  transaction-manager="transactionManager" >
+  <tx:attributes>
+    <tx:method name="save*" propagation="REQUIRED"/>
+    <tx:method name="update*" propagation="REQUIRED"/>
+    <tx:method name="delete*" propagation="REQUIRED"/>
+    <tx:method name="*" read-only="true"/>
+  </tx:attributes>
+</tx:advice>
+
+<!-- 把事务切进去  配置切面 -->
+<aop:config>
+ <aop:pointcut expression="execution(* com.lingzhuo.service.*.*(..))" id="pointCut"/>
+ <aop:advisor advice-ref="advice" pointcut-ref="pointCut"/>
+</aop:config>
+   
+<!--    给service赋值 -->
+<bean id="customerService" class="com.lingzhuo.serviceImpl.CustomerServiceImpl" >
+<property name="customerDao" ref="customerDao"></property>
+</bean>
+    
+<!-- Spring实例化cusAction -->
+<bean id="cusAction" class="com.lingzhuo.action.CusAction">
+  <property name="customerService" ref="customerService"></property>
+</bean>
+ </beans>
